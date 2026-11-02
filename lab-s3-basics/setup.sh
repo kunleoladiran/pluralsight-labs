@@ -17,20 +17,28 @@ if ! aws sts get-caller-identity 2>/dev/null; then
   exit 1
 fi
 
-# ── 2. Terraform init + apply ──────────────────────────────────────────────────
+# ── 2. Install Terraform if missing ──────────────────────────────────────────
+if ! command -v terraform &>/dev/null; then
+  echo "==> Installing Terraform..."
+  sudo yum install -y yum-utils
+  sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+  sudo yum -y install terraform
+fi
+
+# ── 3. Terraform init + apply ──────────────────────────────────────────────────
 echo "==> Running Terraform..."
 cd "$LAB_DIR"
 terraform init -input=false
 terraform apply -auto-approve -input=false
 
-# ── 3. Upload seed files to S3 ────────────────────────────────────────────────
+# ── 4. Upload seed files to S3 ────────────────────────────────────────────────
 BUCKET=$(terraform output -raw bucket_name)
 if [ -n "$(ls -A seed/ 2>/dev/null)" ]; then
   echo "==> Uploading seed files to s3://$BUCKET ..."
   aws s3 cp seed/ s3://$BUCKET/seed/ --recursive
 fi
 
-# ── 4. Print endpoints ────────────────────────────────────────────────────────
+# ── 5. Print endpoints ────────────────────────────────────────────────────────
 echo ""
 echo "==> Lab is ready."
 terraform output
