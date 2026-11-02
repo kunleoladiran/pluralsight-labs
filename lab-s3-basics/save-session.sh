@@ -12,17 +12,14 @@ echo "==> Saving Terraform state..."
 cd "$LAB_DIR"
 terraform show -json > terraform-state-export.json 2>/dev/null || true
 
-# ── 2. Dump any databases ─────────────────────────────────────────────────────
-# Uncomment and adapt as needed:
-# echo "==> Dumping database..."
-# pg_dump "$DB_URL" > seed/dump.sql
-# mysqldump -u root -p"$DB_PASSWORD" mydb > seed/dump.sql
+# ── 2. Sync S3 files back into seed/ ─────────────────────────────────────────
+if command -v terraform &>/dev/null && terraform output bucket_name &>/dev/null 2>&1; then
+  BUCKET=$(terraform output -raw bucket_name)
+  echo "==> Syncing s3://$BUCKET back to seed/..."
+  aws s3 sync s3://$BUCKET/ seed/ --exclude "*.gitkeep"
+fi
 
-# ── 3. Pull any files off the server ─────────────────────────────────────────
-# Uncomment and adapt as needed:
-# scp -i key.pem ec2-user@$SERVER_IP:/app/data ./seed/
-
-# ── 4. Update README with session note ───────────────────────────────────────
+# ── 3. Update README with session note ───────────────────────────────────────
 echo "==> Updating README..."
 cat >> "$LAB_DIR/README.md" <<EOF
 
